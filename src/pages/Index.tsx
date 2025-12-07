@@ -4,6 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 import Icon from '@/components/ui/icon';
 
 interface Product {
@@ -99,6 +103,9 @@ export default function Index() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeSection, setActiveSection] = useState('home');
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [orderForm, setOrderForm] = useState({ name: '', phone: '', email: '', address: '', comment: '' });
+  const { toast } = useToast();
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -134,6 +141,32 @@ export default function Index() {
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  const handleCheckout = () => {
+    if (cart.length === 0) return;
+    setIsCheckoutOpen(true);
+  };
+
+  const handleSubmitOrder = () => {
+    if (!orderForm.name || !orderForm.phone || !orderForm.email) {
+      toast({
+        title: 'Ошибка',
+        description: 'Заполните все обязательные поля',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    toast({
+      title: 'Заказ оформлен!',
+      description: `Спасибо, ${orderForm.name}! Мы свяжемся с вами в ближайшее время.`
+    });
+
+    setCart([]);
+    setOrderForm({ name: '', phone: '', email: '', address: '', comment: '' });
+    setIsCheckoutOpen(false);
+    setActiveSection('home');
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -373,7 +406,7 @@ export default function Index() {
                       <span className="text-lg">Итого:</span>
                       <span className="text-3xl font-bold">{cartTotal.toLocaleString('ru-RU')} ₽</span>
                     </div>
-                    <Button size="lg" className="w-full">
+                    <Button size="lg" className="w-full" onClick={handleCheckout}>
                       Оформить заказ
                       <Icon name="ArrowRight" size={20} className="ml-2" />
                     </Button>
@@ -536,6 +569,115 @@ export default function Index() {
           </div>
         </div>
       </footer>
+
+      <Dialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">Оформление заказа</DialogTitle>
+            <DialogDescription>
+              Заполните контактные данные для оформления заказа
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Ваш заказ</h3>
+              <div className="border rounded-lg p-4 space-y-3 max-h-48 overflow-y-auto">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex justify-between items-center text-sm">
+                    <div className="flex-1">
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-muted-foreground">{item.quantity} шт × {item.price.toLocaleString('ru-RU')} ₽</p>
+                    </div>
+                    <p className="font-semibold">{(item.price * item.quantity).toLocaleString('ru-RU')} ₽</p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex justify-between items-center pt-3 border-t">
+                <span className="font-semibold text-lg">Итого:</span>
+                <span className="font-bold text-2xl">{cartTotal.toLocaleString('ru-RU')} ₽</span>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="font-semibold text-lg">Контактные данные</h3>
+              
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">
+                    Имя <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    placeholder="Иван Иванов"
+                    value={orderForm.name}
+                    onChange={(e) => setOrderForm({ ...orderForm, name: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">
+                      Телефон <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="+7 (999) 123-45-67"
+                      value={orderForm.phone}
+                      onChange={(e) => setOrderForm({ ...orderForm, phone: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">
+                      Email <span className="text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="example@mail.ru"
+                      value={orderForm.email}
+                      onChange={(e) => setOrderForm({ ...orderForm, email: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address">Адрес доставки</Label>
+                  <Input
+                    id="address"
+                    placeholder="Город, улица, дом, квартира"
+                    value={orderForm.address}
+                    onChange={(e) => setOrderForm({ ...orderForm, address: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="comment">Комментарий к заказу</Label>
+                  <Textarea
+                    id="comment"
+                    placeholder="Дополнительная информация или пожелания"
+                    value={orderForm.comment}
+                    onChange={(e) => setOrderForm({ ...orderForm, comment: e.target.value })}
+                    rows={3}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCheckoutOpen(false)}>
+              Отмена
+            </Button>
+            <Button onClick={handleSubmitOrder} size="lg">
+              Подтвердить заказ
+              <Icon name="Check" size={20} className="ml-2" />
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
